@@ -81,12 +81,21 @@ function(req, res) {
       df$height <- NA_real_
     }
 
+    # Sanitize columns: replace NULL/list() values with NA before coercion
+    sanitize_col <- function(col) {
+      vapply(col, function(val) {
+        if (is.null(val) || length(val) == 0 || identical(val, list())) NA_real_ else as.numeric(val)
+      }, numeric(1))
+    }
+
     # Coerce types
-    df$longitude <- suppressWarnings(as.numeric(df$longitude))
-    df$latitude  <- suppressWarnings(as.numeric(df$latitude))
-    df$diameter  <- suppressWarnings(as.numeric(df$diameter))
-    df$height    <- suppressWarnings(as.numeric(df$height))
-    df$speciesName <- as.character(df$speciesName)
+    df$longitude <- suppressWarnings(sanitize_col(df$longitude))
+    df$latitude  <- suppressWarnings(sanitize_col(df$latitude))
+    df$diameter  <- suppressWarnings(sanitize_col(df$diameter))
+    df$height    <- suppressWarnings(sanitize_col(df$height))
+    df$speciesName <- vapply(df$speciesName, function(val) {
+      if (is.null(val) || length(val) == 0) NA_character_ else as.character(val)
+    }, character(1))
 
     # Initialize per-tree warnings
     tree_warnings <- vector("list", n_trees)
