@@ -39,10 +39,15 @@ function(req, res) {
     if (is.data.frame(trees)) {
       df <- trees
     } else if (is.list(trees)) {
-      df <- tryCatch(
-        as.data.frame(do.call(rbind, lapply(trees, as.data.frame, stringsAsFactors = FALSE))),
-        error = function(e) NULL
-      )
+      # Replace NULL values with NA before converting to data.frame
+      df <- tryCatch({
+        trees_clean <- lapply(trees, function(tree) {
+          lapply(tree, function(val) {
+            if (is.null(val) || length(val) == 0) NA else val
+          })
+        })
+        as.data.frame(do.call(rbind, lapply(trees_clean, as.data.frame, stringsAsFactors = FALSE)))
+      }, error = function(e) NULL)
     } else {
       df <- NULL
     }
@@ -193,7 +198,9 @@ function(req, res) {
     }
 
     # --- 6. Compute AGB ---
-    df$AGB_kg <- NA_real_
+    # Note: BIOMASS::computeAGB() returns AGB in Mg (megagrams = tonnes)
+    # We convert to kg (* 1000) for the response
+    df$AGB_Mg <- NA_real_
 
     for (i in seq_len(n_trees)) {
       if (is.na(df$diameter[i]) || is.na(df$wood_density[i])) {
@@ -201,26 +208,36 @@ function(req, res) {
         next
       }
 
-      agb_result <- tryCatch({
-        if (!is.na(df$height[i])) {
-          # Use height-based model
-          computeAGB(D = df$diameter[i], WD = df$wood_density[i], H = df$height[i])
-        } else if (!is.na(df$E[i])) {
-          # Use E-based model (Chave 2014) when height is not available
-          tree_warnings[[i]] <<- c(tree_warnings[[i]], "height is NA, using E-based model (Chave 2014)")
-          computeAGB(D = df$diameter[i], WD = df$wood_density[i],
-                     coord = data.frame(longitude = df$longitude[i], latitude = df$latitude[i]))
-        } else {
-          tree_warnings[[i]] <<- c(tree_warnings[[i]], "AGB not computed: height and E are both NA")
-          NA_real_
+      agb_val <- NA_real_
+      if (!is.na(df$height[i])) {
+        # Use height-based model
+        agb_val <- tryCatch(
+          computeAGB(D = df$diameter[i], WD = df$wood_density[i], H = df$height[i]),
+          error = function(e) { NA_real_ }
+        )
+        if (is.na(agb_val)) {
+          tree_warnings[[i]] <- c(tree_warnings[[i]], "computeAGB failed with height-based model")
         }
-      }, error = function(e) {
-        tree_warnings[[i]] <<- c(tree_warnings[[i]], paste("computeAGB error:", e$message))
-        NA_real_
-      })
+      } else if (!is.na(df$E[i])) {
+        # Use E-based model (Chave 2014) when height is not available
+        tree_warnings[[i]] <- c(tree_warnings[[i]], "height is NA, using E-based model (Chave 2014)")
+        agb_val <- tryCatch(
+          computeAGB(D = df$diameter[i], WD = df$wood_density[i],
+                     coord = data.frame(longitude = df$longitude[i], latitude = df$latitude[i])),
+          error = function(e) { NA_real_ }
+        )
+        if (is.na(agb_val)) {
+          tree_warnings[[i]] <- c(tree_warnings[[i]], "computeAGB failed with E-based model")
+        }
+      } else {
+        tree_warnings[[i]] <- c(tree_warnings[[i]], "AGB not computed: height and E are both NA")
+      }
 
-      df$AGB_kg[i] <- agb_result
+      df$AGB_Mg[i] <- agb_val
     }
+
+    # Convert Mg to kg
+    df$AGB_kg <- df$AGB_Mg * 1000
 
     # --- 7. Assemble response ---
     results <- vector("list", n_trees)
@@ -243,6 +260,7 @@ function(req, res) {
         wood_density = if (is.na(df$wood_density[i])) NULL else round(df$wood_density[i], 4),
         E            = if (is.na(df$E[i])) NULL else round(df$E[i], 4),
         AGB_kg       = if (is.na(df$AGB_kg[i])) NULL else round(df$AGB_kg[i], 2),
+        AGB_Mg       = if (is.na(df$AGB_Mg[i])) NULL else round(df$AGB_Mg[i], 4),
         warnings     = w
       )
     }
@@ -251,7 +269,7 @@ function(req, res) {
 
     elapsed <- (proc.time() - start_time)["elapsed"]
     message(sprintf("[%s] Completed: %d trees, %.2f kg total AGB, %d warnings, %.2fs",
-                    Sys.time(), n_trees, total_agb, n_warnings_total, elapsed))
+                    Sys.time(), n_trees, total_agb, n_warnings_total, as.numeric(elapsed)))
 
     response <- list(
       results = results,
