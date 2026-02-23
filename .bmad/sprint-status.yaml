@@ -1,0 +1,96 @@
+version: "6.0.0"
+project_name: "BIOMASS API"
+project_level: 2
+current_sprint: 2
+sprint_plan_path: "docs/sprint-plan-biomass-api-2026-02-23.md"
+
+sprints:
+  - sprint_number: 1
+    start_date: "2026-02-23"
+    end_date: "2026-03-01"
+    capacity_points: 30
+    committed_points: 19
+    completed_points: 19
+    status: "completed"
+    goal: "Squelette API + workflow BIOMASS complet"
+    stories:
+      - story_id: "STORY-001"
+        title: "Setup projet + plumber skeleton"
+        points: 2
+        status: "completed"
+        assigned_to: "developer"
+      - story_id: "STORY-002"
+        title: "Parsing JSON + validation"
+        points: 3
+        status: "completed"
+        assigned_to: "developer"
+      - story_id: "STORY-003"
+        title: "Séparation genus/species"
+        points: 2
+        status: "completed"
+        assigned_to: "developer"
+      - story_id: "STORY-004"
+        title: "Wood density (getWoodDensity)"
+        points: 3
+        status: "completed"
+        assigned_to: "developer"
+      - story_id: "STORY-005"
+        title: "Paramètre E (computeE) + dédup"
+        points: 3
+        status: "completed"
+        assigned_to: "developer"
+      - story_id: "STORY-006"
+        title: "Calcul AGB (computeAGB)"
+        points: 3
+        status: "completed"
+        assigned_to: "developer"
+      - story_id: "STORY-007"
+        title: "Réponse JSON structurée"
+        points: 3
+        status: "completed"
+        assigned_to: "developer"
+
+  - sprint_number: 2
+    start_date: "2026-03-02"
+    end_date: "2026-03-08"
+    capacity_points: 30
+    committed_points: 15
+    completed_points: 15
+    status: "completed"
+    goal: "Robustesse, Docker, validation"
+    stories:
+      - story_id: "STORY-008"
+        title: "Gestion globale erreurs (tryCatch)"
+        points: 3
+        status: "completed"
+        assigned_to: "developer"
+      - story_id: "STORY-009"
+        title: "Logging des requêtes"
+        points: 2
+        status: "completed"
+        assigned_to: "developer"
+      - story_id: "STORY-010"
+        title: "Dockerfile production"
+        points: 5
+        status: "completed"
+        assigned_to: "developer"
+      - story_id: "STORY-011"
+        title: "Tests d'intégration manuels"
+        points: 3
+        status: "completed"
+        assigned_to: "developer"
+      - story_id: "STORY-012"
+        title: "Validation scientifique"
+        points: 2
+        status: "completed"
+        assigned_to: "developer"
+
+velocity:
+  sprint_1: 19
+  sprint_2: 15
+  rolling_average: 17
+
+team:
+  size: 1
+  sprint_length_weeks: 1
+  capacity_per_sprint: 30
