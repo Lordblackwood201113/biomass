@@ -262,18 +262,25 @@ function(req, res) {
       if (length(w) > 0) n_warnings_total <- n_warnings_total + 1
       if (is.na(df$AGB_kg[i])) n_failed <- n_failed + 1
 
+      # Use jsonlite::unbox(NA) for null fields — NULL serializes as {} but unbox(NA) as null
+      na_or_val <- function(val, digits = NULL) {
+        if (is.na(val)) return(jsonlite::unbox(NA))
+        if (!is.null(digits)) val <- round(val, digits)
+        val
+      }
+
       results[[i]] <- list(
         longitude    = df$longitude[i],
         latitude     = df$latitude[i],
         diameter     = df$diameter[i],
-        height       = if (is.na(df$height[i])) NULL else df$height[i],
+        height       = na_or_val(df$height[i]),
         speciesName  = df$speciesName[i],
-        genus        = if (is.na(df$genus[i])) NULL else df$genus[i],
-        species      = if (is.na(df$species[i])) NULL else df$species[i],
-        wood_density = if (is.na(df$wood_density[i])) NULL else round(df$wood_density[i], 4),
-        E            = if (is.na(df$E[i])) NULL else round(df$E[i], 4),
-        AGB_kg       = if (is.na(df$AGB_kg[i])) NULL else round(df$AGB_kg[i], 2),
-        AGB_Mg       = if (is.na(df$AGB_Mg[i])) NULL else round(df$AGB_Mg[i], 4),
+        genus        = na_or_val(df$genus[i]),
+        species      = na_or_val(df$species[i]),
+        wood_density = na_or_val(df$wood_density[i], 4),
+        E            = na_or_val(df$E[i], 4),
+        AGB_kg       = na_or_val(df$AGB_kg[i], 2),
+        AGB_Mg       = na_or_val(df$AGB_Mg[i], 4),
         warnings     = w
       )
     }
