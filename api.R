@@ -81,21 +81,25 @@ function(req, res) {
       df$height <- NA_real_
     }
 
-    # Sanitize columns: replace NULL/list() values with NA before coercion
-    sanitize_col <- function(col) {
-      vapply(col, function(val) {
-        if (is.null(val) || length(val) == 0 || identical(val, list())) NA_real_ else as.numeric(val)
-      }, numeric(1))
+    # Rebuild df as a clean data.frame with proper types
+    # (plumber may parse NULL as list(), causing list-columns)
+    safe_numeric <- function(val) {
+      if (is.null(val) || length(val) == 0 || is.list(val)) return(NA_real_)
+      suppressWarnings(as.numeric(val))
+    }
+    safe_character <- function(val) {
+      if (is.null(val) || length(val) == 0 || is.list(val)) return(NA_character_)
+      as.character(val)
     }
 
-    # Coerce types
-    df$longitude <- suppressWarnings(sanitize_col(df$longitude))
-    df$latitude  <- suppressWarnings(sanitize_col(df$latitude))
-    df$diameter  <- suppressWarnings(sanitize_col(df$diameter))
-    df$height    <- suppressWarnings(sanitize_col(df$height))
-    df$speciesName <- vapply(df$speciesName, function(val) {
-      if (is.null(val) || length(val) == 0) NA_character_ else as.character(val)
-    }, character(1))
+    df <- data.frame(
+      longitude   = vapply(seq_len(n_trees), function(i) safe_numeric(df$longitude[[i]]), numeric(1)),
+      latitude    = vapply(seq_len(n_trees), function(i) safe_numeric(df$latitude[[i]]), numeric(1)),
+      diameter    = vapply(seq_len(n_trees), function(i) safe_numeric(df$diameter[[i]]), numeric(1)),
+      height      = vapply(seq_len(n_trees), function(i) safe_numeric(df$height[[i]]), numeric(1)),
+      speciesName = vapply(seq_len(n_trees), function(i) safe_character(df$speciesName[[i]]), character(1)),
+      stringsAsFactors = FALSE
+    )
 
     # Initialize per-tree warnings
     tree_warnings <- vector("list", n_trees)
